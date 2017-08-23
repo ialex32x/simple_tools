@@ -6,3 +6,6 @@
 ./export_plist.py test.xlsx output.plist # 指定输出文件
 ```
 *依赖 openpyxl*: https://openpyxl.readthedocs.io/en/default/
+pip install openpyxl
+*pip*: https://pip.readthedocs.io/en/stable/installing/
+
