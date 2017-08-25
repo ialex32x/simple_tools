@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var xlsx = require("xlsx")
 var fs = require("fs")
 var path = require("path")
