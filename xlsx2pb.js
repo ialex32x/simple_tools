@@ -100,7 +100,7 @@ function check_field(type, fieldPath) {
     return false;
 }
 
-function transform_primitive(typename, value) {
+function transform_primitive(typename, value, repeated) {
     switch (typename) {
         case "string":
             return "" + value
@@ -110,9 +110,15 @@ function transform_primitive(typename, value) {
         case "int16": case "uint16":
         case "int32": case "uint32":
         case "int64": case "uint64":
+            if (repeated && typeof (value) == "string") {
+                return value.split(";").map(it => parseInt(it))
+            }
             return parseInt(value, 10)
         case "float":
         case "double":
+            if (repeated && typeof (value) == "string") {
+                return value.split(";").map(it => parseFloat(it))
+            }
             return parseFloat(value)
         default:
             console.warn("unexpected typename:", typename)
@@ -135,11 +141,12 @@ function assign_field(rowIndex, instance, type, fieldPath, value) {
     let fieldName = fieldPath[0]
     let fieldTypeName = type.fields[fieldName].type
     let fieldValue = instance[fieldName]
-    let fieldType = type.fields[fieldName].resolvedType
+    let fieldType = type.fields[fieldName].resolvedType;
+    let fieldRepeated = type.fields[fieldName].repeated
 
     if (fieldType instanceof pbjs.Type) {
         if (fieldValue == null || fieldValue == undefined) {
-            if (type.fields[fieldName].repeated) {
+            if (fieldRepeated) {
                 console.error("never happen")
             } else {
                 fieldValue = create_instance(fieldType)
@@ -147,7 +154,7 @@ function assign_field(rowIndex, instance, type, fieldPath, value) {
                 assign_field(rowIndex, fieldValue, fieldType, fieldPath.slice(1), value)
             }
         } else {
-            if (type.fields[fieldName].repeated) {
+            if (fieldRepeated) {
                 let fieldElement = null;
                 if (!type.fields[fieldName].__lastRowIndex || type.fields[fieldName].__lastRowIndex != rowIndex) {
                     type.fields[fieldName].__lastRowIndex = rowIndex;
@@ -162,18 +169,22 @@ function assign_field(rowIndex, instance, type, fieldPath, value) {
             }
         }
     } else {
-        // console.log(type.fields[fieldName].repeated, fieldTypeName)
+        // console.log(fieldRepeated, fieldTypeName)
         if (fieldValue == null || fieldValue == undefined) {
-            if (type.fields[fieldName].repeated) {
+            if (fieldRepeated) {
                 console.error("never happen")
             } else {
                 fieldValue = transform_primitive(fieldTypeName, value)
                 instance[fieldName] = fieldValue
             }
         } else {
-            if (type.fields[fieldName].repeated) {
-                let fieldElement = transform_primitive(fieldTypeName, value)
-                fieldValue.push(fieldElement)
+            if (fieldRepeated) {
+                let fieldElement = transform_primitive(fieldTypeName, value, fieldRepeated)
+                if (fieldElement instanceof Array) {
+                    fieldValue.push(...fieldElement)
+                } else {
+                    fieldValue.push(fieldElement)
+                }
             } else {
                 fieldValue = transform_primitive(fieldTypeName, value)
                 // console.log(fieldName, fieldTypeName, fieldValue, value)
