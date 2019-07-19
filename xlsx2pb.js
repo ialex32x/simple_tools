@@ -1,5 +1,5 @@
 
-// node xlsx2pb.js path_to_proto_source_file.proto path_to_excel_file.xlsx --type=array --sheet=Sheet1 --message=TestSheet1 --out=res/excel/out.json --out=res/excel/out.pb
+// node xlsx2pb.js path_to_proto_source_file.proto path_to_excel_file.xlsx --type=array --keyword=rows --sheet=Sheet1 --message=TestSheet1 --out=res/excel/out.json --out=res/excel/out.pb
 
 let pbjs = require("protobufjs")
 let fs = require("fs")
@@ -32,6 +32,11 @@ for (let i = 2; i < process.argv.length; i++) {
     } else if (arg == "--type") {
         i++
         scheme.method = process.argv[i]
+    } else if (arg.startsWith("--keyword=")) {
+        scheme.keyword = arg.substring("--keyword=".length)
+    } else if (arg == "--keyword") {
+        i++
+        scheme.keyword = process.argv[i]
     } else if (arg.startsWith("--sheet=")) {
         scheme.sheet = arg.substring("--sheet=".length)
     } else if (arg == "--sheet") {
