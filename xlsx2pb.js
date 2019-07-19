@@ -1,5 +1,5 @@
 
-// node xlsx2pb.js path_to_proto_source_file.proto path_to_excel_file.xlsx --type=array --keyword=rows --sheet=Sheet1 --message=TestSheet1 --out=res/excel/out.json --out=res/excel/out.pb
+// node xlsx2pb.js path_to_proto_source_file.proto path_to_excel_file.xlsx --skip=0 --type=array --keyword=rows --sheet=Sheet1 --message=TestSheet1 --out=res/excel/out.json --out=res/excel/out.pb
 
 let pbjs = require("protobufjs")
 let fs = require("fs")
@@ -7,6 +7,7 @@ var xlsx = require("xlsx")
 let scheme = {
     keyword: "rows", // 数组类型数据行字段固定命名
     keyId: "id",
+    skip: 0,         // 忽略开头若干行
     packages: [],    // proto 文件内容对象化
     export: null,    // 需要转换的 message 类型对象
     rowType: null,   // 如果导出对象是数组默认嵌套类型 (method=array), 此为元素类型
@@ -32,6 +33,11 @@ for (let i = 2; i < process.argv.length; i++) {
     } else if (arg == "--type") {
         i++
         scheme.method = process.argv[i]
+    } else if (arg.startsWith("--skip=")) {
+        scheme.skip = parseInt(arg.substring("--skip=".length))
+    } else if (arg == "--skip") {
+        i++
+        scheme.skip = parseInt(process.argv[i])
     } else if (arg.startsWith("--keyword=")) {
         scheme.keyword = arg.substring("--keyword=".length)
     } else if (arg == "--keyword") {
@@ -215,8 +221,9 @@ for (let sheetIndex in workbook.SheetNames) {
             scheme.instance[scheme.keyword] = rowObjects
             let rowType = scheme.export.fields[scheme.keyword].resolvedType // 数据实际类型
             scheme.rowType = rowType
-            for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex++) {
-                if (rowIndex == 0) {
+            let startRowIndex = range.s.r + scheme.skip
+            for (let rowIndex = startRowIndex; rowIndex <= range.e.r; rowIndex++) {
+                if (rowIndex == startRowIndex) {
                     // 取字段名
                     for (let colIndex = range.s.c; colIndex <= range.e.c; colIndex++) {
                         let cell = sheet[xlsx.utils.encode_cell({ c: colIndex, r: rowIndex })]
@@ -268,7 +275,7 @@ for (let outfile of scheme.out) {
         let bytes = scheme.export.encode(scheme.instance).finish()
         fs.writeFileSync(outfile, bytes)
 
-        let obj = scheme.export.decode(bytes)
-        fs.writeFileSync(outfile + ".json", JSON.stringify(obj))
+        // let obj = scheme.export.decode(bytes)
+        // fs.writeFileSync(outfile + ".json", JSON.stringify(obj))
     }
 }
